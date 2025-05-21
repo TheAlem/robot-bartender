@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Robot Bartender - Bolivia</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            color: #333;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #9333ea, #6366f1);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+        
+        header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('/api/placeholder/1200/250') center/cover;
+            opacity: 0.15;
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            margin-bottom: 0.5rem;
+        }
+        
+        .tagline {
+            font-size: 1.2rem;
+            font-weight: 300;
+            margin-bottom: 1rem;
+        }
+        
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+        
+        .drinks-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+        
+        .drink-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        
+        .drink-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08);
+        }
+        
+        .drink-img {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+        }
+        
+        .drink-content {
+            padding: 1.5rem;
+        }
+        
+        .drink-name {
+            font-size: 1.5rem;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .drink-description {
+            color: #666;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+        }
+        
+        .drink-price {
+            color: #4c1d95;
+            font-weight: bold;
+            font-size: 1.3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .order-btn {
+            background: linear-gradient(90deg, #9333ea, #6366f1);
+            border: none;
+            color: white;
+            padding: 0.8rem 0;
+            width: 100%;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+        }
+        
+        .order-btn:hover {
+            opacity: 0.9;
+        }
+        
+        /* Modal de pago */
+        .payment-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.75);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s;
+        }
+        
+        .payment-modal.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .modal-content {
+            background: white;
+            width: 90%;
+            max-width: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            transform: scale(0.9);
+            transition: transform 0.3s;
+        }
+        
+        .payment-modal.active .modal-content {
+            transform: scale(1);
+        }
+        
+        .modal-header {
+            background: linear-gradient(90deg, #9333ea, #6366f1);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        .close-modal {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            color: white;
+            cursor: pointer;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .qr-container {
+            background: #f8f9fa;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1.5rem auto;
+            width: 200px;
+            height: 200px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        #payment-qr {
+            max-width: 100%;
+            max-height: 100%;
+        }
+        
+        .payment-info {
+            margin-bottom: 1rem;
+        }
+        
+        .payment-info p {
+            margin-bottom: 0.5rem;
+        }
+        
+        .drink-selected {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .price-selected {
+            font-weight: bold;
+            color: #4c1d95;
+        }
+        
+        .payment-status {
+            padding: 1rem;
+            border-radius: 6px;
+            background: #f8f9fa;
+            margin-top: 1rem;
+        }
+        
+        #status-indicator {
+            font-weight: bold;
+            color: #f59e0b;
+        }
+        
+        #status-indicator.success {
+            color: #10b981;
+        }
+        
+        #status-indicator.failed {
+            color: #ef4444;
+        }
+        
+        /* Animación de carga */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(0,0,0,0.1);
+            border-radius: 50%;
+            border-top-color: #6366f1;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 8px;
+            vertical-align: middle;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        footer {
+            background: #1f2937;
+            color: white;
+            text-align: center;
+            padding: 1.5rem 0;
+            margin-top: 3rem;
+        }
+        
+        .tag {
+            display: inline-block;
+            background: rgba(147, 51, 234, 0.1);
+            color: #9333ea;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            margin-right: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        @media (max-width: 768px) {
+            .drinks-container {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <h1>Robot Bartender</h1>
+            <p class="tagline">Bebidas perfectas, servidas con precisión</p>
+        </div>
+    </header>
+    
+    <main>
+        <div class="drinks-container">
+            <div class="drink-card" data-id="1" data-price="55.00">
+                <img src="/api/placeholder/400/200" alt="Margarita" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Popular</span>
+                    <h2 class="drink-name">Margarita Clásica</h2>
+                    <p class="drink-description">Una refrescante mezcla de tequila, triple sec y jugo de limón fresco servida con borde de sal.</p>
+                    <p class="drink-price">Bs 55.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+            
+            <div class="drink-card" data-id="2" data-price="62.00">
+                <img src="/api/placeholder/400/200" alt="Mojito" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Refrescante</span>
+                    <h2 class="drink-name">Mojito Cubano</h2>
+                    <p class="drink-description">Ron blanco mezclado con azúcar, hojas de menta fresca, jugo de lima y un toque de agua con gas.</p>
+                    <p class="drink-price">Bs 62.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+            
+            <div class="drink-card" data-id="3" data-price="69.00">
+                <img src="/api/placeholder/400/200" alt="Piña Colada" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Tropical</span>
+                    <h2 class="drink-name">Piña Colada Tropical</h2>
+                    <p class="drink-description">Deliciosa combinación de ron blanco, crema de coco y jugo de piña, una escapada tropical en cada sorbo.</p>
+                    <p class="drink-price">Bs 69.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+            
+            <div class="drink-card" data-id="4" data-price="75.00">
+                <img src="/api/placeholder/400/200" alt="Cosmopolitan" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Elegante</span>
+                    <h2 class="drink-name">Cosmopolitan</h2>
+                    <p class="drink-description">Un cóctel sofisticado de vodka, triple sec, jugo de arándano y un toque de lima fresca.</p>
+                    <p class="drink-price">Bs 75.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+            
+            <div class="drink-card" data-id="5" data-price="79.00">
+                <img src="/api/placeholder/400/200" alt="Daiquiri" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Dulce</span>
+                    <h2 class="drink-name">Daiquiri de Fresa</h2>
+                    <p class="drink-description">Ron blanco mezclado con fresas frescas, jugo de lima y azúcar para un cóctel suave y frutal.</p>
+                    <p class="drink-price">Bs 79.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+            
+            <div class="drink-card" data-id="6" data-price="82.00">
+                <img src="/api/placeholder/400/200" alt="Long Island" class="drink-img">
+                <div class="drink-content">
+                    <span class="tag">Fuerte</span>
+                    <h2 class="drink-name">Long Island Iced Tea</h2>
+                    <p class="drink-description">Una potente mezcla de vodka, tequila, ron, gin, triple sec, jugo de limón y cola.</p>
+                    <p class="drink-price">Bs 82.00</p>
+                    <button class="order-btn">Ordenar Ahora</button>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <div class="payment-modal" id="paymentModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Pago con QR</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body">
+                <div class="payment-info">
+                    <p>Has seleccionado: <span class="drink-selected" id="selectedDrink">Margarita</span></p>
+                    <p>Precio: <span class="price-selected" id="selectedPrice">Bs 55.00</span></p>
+                </div>
+                
+                <p>Escanea este QR con tu aplicación bancaria para pagar</p>
+                
+                <div class="qr-container">
+                    <!-- Aquí insertamos el QR de tu banco -->
+                    <img id="payment-qr" src="/api/placeholder/200/200" alt="Código QR de pago">
+                </div>
+                
+                <div class="payment-status">
+                    <p>Estado: <span id="status-indicator">Esperando pago <span class="loading"></span></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <footer>
+        <p>&copy; 2025 Robot Bartender - Santa Cruz, Bolivia</p>
+    </footer>
+    
+    <script>
+        // Variables globales
+        const API_URL = 'http://localhost:3000'; // Cambiar a la URL real de tu servidor
+        let currentTransactionId = null;
+        let paymentCheckInterval = null;
+        
+        // Elementos del DOM
+        const paymentModal = document.getElementById('paymentModal');
+        const closeModalBtn = document.querySelector('.close-modal');
+        const selectedDrinkElement = document.getElementById('selectedDrink');
+        const selectedPriceElement = document.getElementById('selectedPrice');
+        const paymentQrElement = document.getElementById('payment-qr');
+        const statusIndicator = document.getElementById('status-indicator');
+        const orderButtons = document.querySelectorAll('.order-btn');
+        
+        // Precarga de imágenes reales (reemplazar con URLs reales)
+        const drinkImages = {
+            1: '/margarita.jpg', // Margarita
+            2: '/mojito.jpg', // Mojito
+            3: '/pina-colada.jpg', // Piña Colada
+            4: '/api/placeholder/400/200', // Cosmopolitan
+            5: '/api/placeholder/400/200', // Daiquiri
+            6: '/api/placeholder/400/200'  // Long Island
+        };
+        
+        // URL fija del QR de tu banco
+        const bankQrUrl = '/banco-qr.jpg'; // Reemplazar con la URL de tu QR real
+        
+        // Escuchar clics en los botones de ordenar
+        orderButtons.forEach(button => {
+            button.addEventListener('click', function() {
+                const drinkCard = this.closest('.drink-card');
+                const drinkId = drinkCard.dataset.id;
+                const drinkName = drinkCard.querySelector('.drink-name').textContent;
+                const drinkPrice = drinkCard.dataset.price;
+                
+                // Mostrar detalles en el modal
+                selectedDrinkElement.textContent = drinkName;
+                selectedPriceElement.textContent = `Bs ${drinkPrice}`;
+                
+                // Mostrar el QR fijo de tu banco
+                paymentQrElement.src = bankQrUrl;
+                
+                // Iniciar proceso de pago
+                createTransaction(drinkId, drinkPrice, drinkName);
+                
+                // Mostrar modal
+                paymentModal.classList.add('active');
+            });
+        });
+        
+        // Cerrar modal
+        closeModalBtn.addEventListener('click', function() {
+            paymentModal.classList.remove('active');
+            // Detener verificación de pago
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+            // Resetear estado
+            statusIndicator.textContent = 'Esperando pago ';
+            statusIndicator.className = '';
+            const loadingSpinner = document.createElement('span');
+            loadingSpinner.className = 'loading';
+            statusIndicator.appendChild(loadingSpinner);
+        });
+        
+        // Función para crear transacción
+        async function createTransaction(drinkId, amount, drinkName) {
+            try {
+                statusIndicator.innerHTML = 'Generando transacción <span class="loading"></span>';
+                
+                // Petición real al servidor (cuando esté conectado)
+                if (false) { // Cambia a 'true' cuando conectes con el servidor real
+                    const response = await fetch(`${API_URL}/create-transaction`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            drinkId,
+                            amount,
+                            drinkName
+                        })
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al crear la transacción');
+                    }
+                    
+                    const data = await response.json();
+                    currentTransactionId = data.transactionId;
+                } else {
+                    // Simulación para pruebas
+                    await new Promise(resolve => setTimeout(resolve, 1500));
+                    currentTransactionId = 'sim-' + Math.random().toString(36).substring(2, 10);
+                }
+                
+                // Mostrar siempre el QR fijo de tu banco
+                paymentQrElement.src = bankQrUrl;
+                
+                statusIndicator.innerHTML = 'Esperando pago <span class="loading"></span>';
+                
+                // Iniciar verificación de pago
+                checkPaymentStatus();
+                
+            } catch (error) {
+                console.error('Error al crear transacción:', error);
+                statusIndicator.textContent = 'Error al generar código de pago';
+                statusIndicator.className = 'failed';
+            }
+        }
+        
+        // Función para verificar estado del pago
+        function checkPaymentStatus() {
+            // Limpiar intervalo anterior si existe
+            if (paymentCheckInterval) {
+                clearInterval(paymentCheckInterval);
+            }
+            
+            // Para modo de pruebas: simulamos un pago exitoso después de 5 segundos
+            // Esta parte se reemplazaría con verificación real cuando conectes el servidor
+            paymentCheckInterval = setTimeout(() => {
+                // Simulación de pago exitoso
+                statusIndicator.textContent = '¡Pago exitoso! Preparando bebida...';
+                statusIndicator.className = 'success';
+                
+                // Después de un tiempo, simulamos que la bebida está lista
+                setTimeout(() => {
+                    statusIndicator.textContent = '¡Bebida lista! Disfruta';
+                    
+                    // Cerramos el modal automáticamente después de unos segundos
+                    setTimeout(() => {
+                        paymentModal.classList.remove('active');
+                    }, 3000);
+                    
+                }, 3000);
+                
+            }, 5000);
+            
+            // Código para verificación real (descomentar cuando conectes con servidor)
+            /*
+            paymentCheckInterval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_URL}/check-payment/${currentTransactionId}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Error al verificar pago');
+                    }
+                    
+                    const data = await response.json();
+                    
+                    if (data.status === 'completed') {
+                        statusIndicator.textContent = '¡Pago exitoso! Preparando bebida...';
+                        statusIndicator.className = 'success';
+                        
+                        clearInterval(paymentCheckInterval);
+                        
+                        setTimeout(() => {
+                            statusIndicator.textContent = '¡Bebida lista! Disfruta';
+                            
+                            setTimeout(() => {
+                                paymentModal.classList.remove('active');
+                            }, 3000);
+                            
+                        }, 3000);
+                    } else if (data.status === 'failed') {
+                        statusIndicator.textContent = 'Pago fallido. Intenta nuevamente.';
+                        statusIndicator.className = 'failed';
+                        clearInterval(paymentCheckInterval);
+                    }
+                    
+                } catch (error) {
+                    console.error('Error al verificar pago:', error);
+                    statusIndicator.textContent = 'Error al verificar estado del pago';
+                    statusIndicator.className = 'failed';
+                    clearInterval(paymentCheckInterval);
+                }
+            }, 3000);
+            */
+        }
+        
+        // Función para reemplazar los placeholders con imágenes reales
+        function loadRealImages() {
+            document.querySelectorAll('.drink-card').forEach(card => {
+                const drinkId = card.dataset.id;
+                const imgElement = card.querySelector('.drink-img');
+                
+                // Si tenemos una imagen real para esta bebida, la cargamos
+                if (drinkImages[drinkId]) {
+                    imgElement.src = drinkImages[drinkId];
+                }
+            });
+        }
+        
+        // Cargar imágenes cuando se cargue la página
+        window.addEventListener('DOMContentLoaded', loadRealImages);
+    </script>
+</body>
+</html>
