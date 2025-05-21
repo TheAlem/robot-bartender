@@ -38,7 +38,7 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: url('/api/placeholder/1200/250') center/cover;
+            /* background: url('/api/placeholder/1200/250') center/cover; */ /* Eliminado placeholder */
             opacity: 0.15;
         }
         
@@ -130,8 +130,8 @@
             position: fixed;
             top: 0;
             left: 0;
-            width: 100%;
-            height: 100%;
+            width: 100vw;
+            height: 100vh;
             background: rgba(0,0,0,0.75);
             display: flex;
             justify-content: center;
@@ -141,71 +141,121 @@
             visibility: hidden;
             transition: all 0.3s;
         }
-        
+
         .payment-modal.active {
             opacity: 1;
             visibility: visible;
+            backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
-        
+
         .modal-content {
             background: white;
-            width: 90%;
-            max-width: 400px;
-            border-radius: 12px;
+            width: 95vw;
+            max-width: 410px;
+            border-radius: 16px;
             overflow: hidden;
             position: relative;
-            transform: scale(0.9);
+            box-shadow: 0 8px 32px 0 rgba(60, 30, 90, 0.25);
+            transform: scale(0.95);
             transition: transform 0.3s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
-        
+
         .payment-modal.active .modal-content {
             transform: scale(1);
         }
-        
+
         .modal-header {
+            width: 100%;
             background: linear-gradient(90deg, #9333ea, #6366f1);
             color: white;
-            padding: 1.5rem;
+            padding: 1.5rem 1rem 1rem 1rem;
             text-align: center;
             position: relative;
         }
-        
+
         .close-modal {
             position: absolute;
-            top: 1rem;
-            right: 1rem;
+            top: 1.2rem;
+            right: 1.2rem;
             font-size: 1.5rem;
             color: white;
             cursor: pointer;
-            width: 30px;
-            height: 30px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            background: rgba(255,255,255,0.2);
+            background: rgba(255,255,255,0.15);
             display: flex;
             justify-content: center;
             align-items: center;
         }
-        
+
         .modal-body {
-            padding: 1.5rem;
+            width: 100%;
+            padding: 1.2rem 1.5rem 1.5rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
             text-align: center;
         }
-        
+
         .qr-container {
             background: #f8f9fa;
-            padding: 1rem;
-            border-radius: 8px;
-            margin: 1.5rem auto;
-            width: 200px;
-            height: 200px;
+            padding: 1.2rem;
+            border-radius: 10px;
+            margin: 1.2rem auto;
+            width: 300px;
+            height: 300px;
             display: flex;
             justify-content: center;
             align-items: center;
+            flex-direction: column;
+            box-shadow: 0 2px 8px 0 rgba(80, 60, 150, 0.07);
+        }
+
+        #payment-qr {
+            max-width: 280px;
+            max-height: 280px;
+            margin-bottom: 10px;
+            margin-top: 10px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+            border-radius: 8px;
+            background: white;
+            box-shadow: 0 2px 6px rgba(150, 100, 200, 0.08);
+        }
+
+        .download-qr-btn {
+            margin-top: 6px;
+            width: 100%;
         }
         
-        #payment-qr {
-            max-width: 100%;
-            max-height: 100%;
+        .download-qr-btn {
+            background: linear-gradient(90deg, #9333ea, #6366f1);
+            border: none;
+            color: white;
+            padding: 0.8rem 1.5rem;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .download-qr-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .download-qr-btn svg {
+            width: 20px;
+            height: 20px;
         }
         
         .payment-info {
@@ -288,6 +338,9 @@
             }
         }
     </style>
+    <!-- Firebase SDKs (Agrega estos script tags si no los tienes ya) -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
 </head>
 <body>
     <header>
@@ -378,14 +431,13 @@
                     <p>Has seleccionado: <span class="drink-selected" id="selectedDrink">Margarita</span></p>
                     <p>Precio: <span class="price-selected" id="selectedPrice">Bs 55.00</span></p>
                 </div>
-                
                 <p>Escanea este QR con tu aplicación bancaria para pagar</p>
-                
                 <div class="qr-container">
-                    <!-- Aquí insertamos el QR de tu banco -->
                     <img id="payment-qr" src="/api/placeholder/200/200" alt="Código QR de pago">
+                    <button class="download-qr-btn" id="download-qr">
+                        Descargar QR
+                    </button>
                 </div>
-                
                 <div class="payment-status">
                     <p>Estado: <span id="status-indicator">Esperando pago <span class="loading"></span></span></p>
                 </div>
@@ -397,11 +449,27 @@
         <p>&copy; 2025 Robot Bartender - Santa Cruz, Bolivia</p>
     </footer>
     
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="js/payments.js"></script>
     <script>
         // Variables globales
-        const API_URL = 'http://localhost:3000'; // Cambiar a la URL real de tu servidor
+        const API_URL = 'http://localhost:3000';
         let currentTransactionId = null;
         let paymentCheckInterval = null;
+        const FIREBASE_STATUS_URL = 'https://us-central1-robot-bartender-f3e82.cloudfunctions.net/getPaymentStatus'; // URL de tu nueva función de estado
+        
+        // Declarar la colección de Firestore aquí para asegurar ámbito
+        let pedidosCollection; 
+
+        // Base de datos de bebidas
+        const drinks = {
+            '1': { name: 'Margarita Clásica', price: 55.00, image: '/images/margarita.jpg' },
+            '2': { name: 'Mojito Cubano', price: 62.00, image: '/images/mojito.jpg' },
+            '3': { name: 'Piña Colada Tropical', price: 69.00, image: '/images/pina-colada.jpg' },
+            '4': { name: 'Cosmopolitan', price: 75.00, image: '/images/cosmopolitan.jpg' },
+            '5': { name: 'Daiquiri de Fresa', price: 79.00, image: '/images/daiquiri.jpg' },
+            '6': { name: 'Long Island Iced Tea', price: 82.00, image: '/images/long-island.jpg' }
+        };
         
         // Elementos del DOM
         const paymentModal = document.getElementById('paymentModal');
@@ -412,187 +480,271 @@
         const statusIndicator = document.getElementById('status-indicator');
         const orderButtons = document.querySelectorAll('.order-btn');
         
-        // Precarga de imágenes reales (reemplazar con URLs reales)
-        const drinkImages = {
-            1: '/margarita.jpg', // Margarita
-            2: '/mojito.jpg', // Mojito
-            3: '/pina-colada.jpg', // Piña Colada
-            4: '/api/placeholder/400/200', // Cosmopolitan
-            5: '/api/placeholder/400/200', // Daiquiri
-            6: '/api/placeholder/400/200'  // Long Island
-        };
-        
-        // URL fija del QR de tu banco
-        const bankQrUrl = '/banco-qr.jpg'; // Reemplazar con la URL de tu QR real
-        
-        // Escuchar clics en los botones de ordenar
-        orderButtons.forEach(button => {
-            button.addEventListener('click', function() {
-                const drinkCard = this.closest('.drink-card');
-                const drinkId = drinkCard.dataset.id;
-                const drinkName = drinkCard.querySelector('.drink-name').textContent;
-                const drinkPrice = drinkCard.dataset.price;
-                
-                // Mostrar detalles en el modal
-                selectedDrinkElement.textContent = drinkName;
-                selectedPriceElement.textContent = `Bs ${drinkPrice}`;
-                
-                // Mostrar el QR fijo de tu banco
-                paymentQrElement.src = bankQrUrl;
-                
-                // Iniciar proceso de pago
-                createTransaction(drinkId, drinkPrice, drinkName);
-                
-                // Mostrar modal
-                paymentModal.classList.add('active');
-            });
-        });
-        
-        // Cerrar modal
-        closeModalBtn.addEventListener('click', function() {
-            paymentModal.classList.remove('active');
-            // Detener verificación de pago
-            if (paymentCheckInterval) {
-                clearInterval(paymentCheckInterval);
-            }
-            // Resetear estado
-            statusIndicator.textContent = 'Esperando pago ';
-            statusIndicator.className = '';
-            const loadingSpinner = document.createElement('span');
-            loadingSpinner.className = 'loading';
-            statusIndicator.appendChild(loadingSpinner);
-        });
-        
-        // Función para crear transacción
-        async function createTransaction(drinkId, amount, drinkName) {
-            try {
-                statusIndicator.innerHTML = 'Generando transacción <span class="loading"></span>';
-                
-                // Petición real al servidor (cuando esté conectado)
-                if (false) { // Cambia a 'true' cuando conectes con el servidor real
-                    const response = await fetch(`${API_URL}/create-transaction`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            drinkId,
-                            amount,
-                            drinkName
-                        })
-                    });
-                    
-                    if (!response.ok) {
-                        throw new Error('Error al crear la transacción');
-                    }
-                    
-                    const data = await response.json();
-                    currentTransactionId = data.transactionId;
-                } else {
-                    // Simulación para pruebas
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    currentTransactionId = 'sim-' + Math.random().toString(36).substring(2, 10);
-                }
-                
-                // Mostrar siempre el QR fijo de tu banco
-                paymentQrElement.src = bankQrUrl;
-                
-                statusIndicator.innerHTML = 'Esperando pago <span class="loading"></span>';
-                
-                // Iniciar verificación de pago
-                checkPaymentStatus();
-                
-            } catch (error) {
-                console.error('Error al crear transacción:', error);
-                statusIndicator.textContent = 'Error al generar código de pago';
-                statusIndicator.className = 'failed';
-            }
-        }
-        
-        // Función para verificar estado del pago
-        function checkPaymentStatus() {
-            // Limpiar intervalo anterior si existe
-            if (paymentCheckInterval) {
-                clearInterval(paymentCheckInterval);
-            }
-            
-            // Para modo de pruebas: simulamos un pago exitoso después de 5 segundos
-            // Esta parte se reemplazaría con verificación real cuando conectes el servidor
-            paymentCheckInterval = setTimeout(() => {
-                // Simulación de pago exitoso
-                statusIndicator.textContent = '¡Pago exitoso! Preparando bebida...';
-                statusIndicator.className = 'success';
-                
-                // Después de un tiempo, simulamos que la bebida está lista
-                setTimeout(() => {
-                    statusIndicator.textContent = '¡Bebida lista! Disfruta';
-                    
-                    // Cerramos el modal automáticamente después de unos segundos
-                    setTimeout(() => {
-                        paymentModal.classList.remove('active');
-                    }, 3000);
-                    
-                }, 3000);
-                
-            }, 5000);
-            
-            // Código para verificación real (descomentar cuando conectes con servidor)
-            /*
-            paymentCheckInterval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_URL}/check-payment/${currentTransactionId}`);
-                    
-                    if (!response.ok) {
-                        throw new Error('Error al verificar pago');
-                    }
-                    
-                    const data = await response.json();
-                    
-                    if (data.status === 'completed') {
-                        statusIndicator.textContent = '¡Pago exitoso! Preparando bebida...';
-                        statusIndicator.className = 'success';
-                        
-                        clearInterval(paymentCheckInterval);
-                        
-                        setTimeout(() => {
-                            statusIndicator.textContent = '¡Bebida lista! Disfruta';
-                            
-                            setTimeout(() => {
-                                paymentModal.classList.remove('active');
-                            }, 3000);
-                            
-                        }, 3000);
-                    } else if (data.status === 'failed') {
-                        statusIndicator.textContent = 'Pago fallido. Intenta nuevamente.';
-                        statusIndicator.className = 'failed';
-                        clearInterval(paymentCheckInterval);
-                    }
-                    
-                } catch (error) {
-                    console.error('Error al verificar pago:', error);
-                    statusIndicator.textContent = 'Error al verificar estado del pago';
-                    statusIndicator.className = 'failed';
-                    clearInterval(paymentCheckInterval);
-                }
-            }, 3000);
-            */
-        }
-        
-        // Función para reemplazar los placeholders con imágenes reales
-        function loadRealImages() {
+        // Función para cargar las imágenes de las bebidas
+        function loadDrinkImages() {
             document.querySelectorAll('.drink-card').forEach(card => {
                 const drinkId = card.dataset.id;
                 const imgElement = card.querySelector('.drink-img');
-                
-                // Si tenemos una imagen real para esta bebida, la cargamos
-                if (drinkImages[drinkId]) {
-                    imgElement.src = drinkImages[drinkId];
+                if (drinks[drinkId] && drinks[drinkId].image) {
+                    imgElement.src = drinks[drinkId].image;
+                    imgElement.alt = drinks[drinkId].name;
                 }
             });
         }
-        
+
         // Cargar imágenes cuando se cargue la página
-        window.addEventListener('DOMContentLoaded', loadRealImages);
+        window.addEventListener('DOMContentLoaded', loadDrinkImages);
+        
+        // Escuchar clics en los botones de ordenar
+        function setupOrderButtons() {
+            orderButtons.forEach(button => {
+                // Remover cualquier listener existente
+                const newButton = button.cloneNode(true);
+                button.parentNode.replaceChild(newButton, button);
+                
+                newButton.addEventListener('click', function() {
+                    console.log('Botón Ordenar Ahora clickeado.');
+                    // Deshabilitar el botón inmediatamente para evitar clics duplicados
+                    this.disabled = true;
+                    this.textContent = 'Procesando...';
+
+                    const drinkCard = this.closest('.drink-card');
+                    const drinkId = drinkCard.dataset.id;
+                    const drinkName = drinks[drinkId].name;
+                    const drinkPrice = drinks[drinkId].price;
+                    
+                    // Mostrar detalles en el modal
+                    selectedDrinkElement.textContent = drinkName;
+                    selectedPriceElement.textContent = `Bs ${drinkPrice.toFixed(2)}`;
+                    
+                    // Iniciar proceso de pago
+                    handlePayment(drinkId, drinkPrice, this);
+                });
+            });
+        }
+
+        // Llamar a setupOrderButtons una sola vez cuando se carga la página
+        window.addEventListener('DOMContentLoaded', () => {
+            loadDrinkImages();
+            setupOrderButtons();
+        });
+        
+        // Función para manejar el pago
+        async function handlePayment(drinkId, amount, clickedButton) {
+            const userData = {
+                email: "cliente@ejemplo.com",
+                names: "Cliente Ejemplo",
+                numero: "77777777",
+                ci: "12345678"
+            };
+
+            const cartItems = [{
+                product_name: drinks[drinkId].name,
+                qty: 1,
+                price: amount
+            }];
+
+            // --- Nuevo: Crear documento en Firestore antes de generar QR ---
+            const paymentNumber = window.paymentService.getNextPaymentNumber(); // Obtener el próximo ID
+            const orderData = {
+                PedidoID: paymentNumber,
+                drinkId: drinkId,
+                drinkName: drinks[drinkId].name,
+                amount: amount,
+                userData: userData,
+                estadoPago: "pendiente", // Estado inicial
+                fechaCreacion: firebase.firestore.FieldValue.serverTimestamp()
+            };
+
+            try {
+                // Guardar el pedido en Firestore
+                await pedidosCollection.doc(paymentNumber).set(orderData);
+                console.log('Pedido creado en Firestore con ID:', paymentNumber);
+
+                const result = await window.paymentService.generateQRCodeAndOrder(paymentNumber, userData, cartItems);
+                
+                if (result.success) {
+                    // Mostrar el QR en el modal
+                    paymentQrElement.src = result.qrImage;
+                    statusIndicator.textContent = 'Escanea el código QR con tu aplicación bancaria';
+                    statusIndicator.className = '';
+                    
+                    // Mostrar el modal
+                    paymentModal.classList.add('active');
+                    
+                    // Guardar el ID de la orden para referencia
+                    currentTransactionId = result.orderId;
+
+                    // Iniciar el oyente de Firestore para este pedido
+                    startFirestoreListener(currentTransactionId);
+
+                } else {
+                    console.error('Error al generar el código QR: ' + result.error);
+                }
+            } catch (error) {
+                console.error('Error al procesar el pago:', error.message);
+                alert('Error al procesar el pago: ' + error.message);
+            } finally {
+                // Volver a habilitar el botón después de que el proceso termine
+                if (clickedButton) {
+                    clickedButton.disabled = false;
+                    clickedButton.textContent = 'Ordenar Ahora';
+                }
+            }
+        }
+
+        let unsubscribeFromPedido = null; // Para guardar la función de desuscripción
+
+        // Función para iniciar el oyente de Firestore
+        function startFirestoreListener(orderId) {
+            // Limpiar cualquier oyente previo
+            if (unsubscribeFromPedido) {
+                unsubscribeFromPedido();
+            }
+
+            console.log('Iniciando oyente de Firestore para PedidoID:', orderId);
+            const docRef = pedidosCollection.doc(orderId);
+
+            unsubscribeFromPedido = docRef.onSnapshot((docSnapshot) => {
+                if (docSnapshot.exists) {
+                    const data = docSnapshot.data();
+                    const estadoPago = data.estadoPago || 'pendiente';
+                    console.log('Actualización de Firestore recibida. Estado:', estadoPago);
+
+                    // Actualizar UI basado en el estado
+                    if (estadoPago === 'confirmado') {
+                        statusIndicator.textContent = 'Pago confirmado!';
+                        statusIndicator.className = 'success';
+                        // Podemos detener el oyente aquí si no hay más cambios de estado después de confirmado
+                        if (unsubscribeFromPedido) {
+                            unsubscribeFromPedido();
+                            unsubscribeFromPedido = null;
+                        }
+
+                        // Iniciar la secuencia de mensajes después de la confirmación
+                        setTimeout(() => {
+                            statusIndicator.textContent = 'sirviendo la bebida...';
+                            statusIndicator.className = ''; // o clase específica para sirviendo
+                        }, 2000);
+
+                        setTimeout(() => {
+                            statusIndicator.textContent = 'bebida lista disfrute';
+                            statusIndicator.className = 'success'; // o clase específica para listo
+                        }, 5000);
+
+                    } else if (estadoPago === 'pendiente') {
+                        statusIndicator.textContent = 'Esperando pago...';
+                        statusIndicator.className = '';
+                    } else if (estadoPago === 'pendiente/fallido') {
+                        statusIndicator.textContent = 'Pago fallido o pendiente.'; // O un mensaje más específico si tienes más estados
+                        statusIndicator.className = 'failed';
+                        // Podemos detener el oyente aquí si el pago falló definitivamente
+                        if (unsubscribeFromPedido) {
+                            unsubscribeFromPedido();
+                            unsubscribeFromPedido = null;
+                        }
+                    }
+                    // Puedes agregar más casos 'else if' para otros estados si los tienes
+
+                } else {
+                    console.warn('Documento de pedido no encontrado en Firestore.');
+                    statusIndicator.textContent = 'Error: Pedido no encontrado.';
+                    statusIndicator.className = 'failed';
+                    if (unsubscribeFromPedido) {
+                        unsubscribeFromPedido();
+                        unsubscribeFromPedido = null;
+                    }
+                }
+            }, (error) => {
+                console.error('Error en el oyente de Firestore:', error);
+                statusIndicator.textContent = 'Error al monitorear estado.';
+                statusIndicator.className = 'failed';
+                if (unsubscribeFromPedido) {
+                    unsubscribeFromPedido();
+                    unsubscribeFromPedido = null;
+                }
+            });
+        }
+
+        // Función para limpiar el oyente de Firestore y resetear estado
+        async function resetPaymentStatus() {
+            if (unsubscribeFromPedido) {
+                unsubscribeFromPedido();
+                unsubscribeFromPedido = null;
+            }
+            
+            // Si hay un ID de transacción actual, eliminar el documento de Firestore
+            if (currentTransactionId) {
+                try {
+                    await pedidosCollection.doc(currentTransactionId).delete();
+                    console.log('Documento eliminado de Firestore:', currentTransactionId);
+                } catch (error) {
+                    console.error('Error al eliminar documento de Firestore:', error);
+                }
+            }
+            
+            currentTransactionId = null;
+            statusIndicator.textContent = 'Esperando pago...';
+            statusIndicator.className = '';
+            paymentQrElement.src = ''; // Resetear src de la imagen del QR para evitar 404 de placeholder
+            
+            // Habilitar todos los botones de ordenar
+            document.querySelectorAll('.order-btn').forEach(button => {
+                button.disabled = false;
+                button.textContent = 'Ordenar Ahora';
+            });
+        }
+
+        // Cerrar modal
+        closeModalBtn.addEventListener('click', async function() {
+            paymentModal.classList.remove('active');
+            await resetPaymentStatus(); // Resetear estado y limpiar oyente al cerrar
+        });
+
+        // Cerrar modal al hacer clic fuera
+        paymentModal.addEventListener('click', async function(event) {
+            if (event.target === paymentModal) {
+                paymentModal.classList.remove('active');
+                await resetPaymentStatus();
+            }
+        });
+
+        // Función para descargar el QR
+        document.getElementById('download-qr').addEventListener('click', function() {
+            const qrImage = document.getElementById('payment-qr');
+            const link = document.createElement('a');
+            link.download = `qr-pago-${currentTransactionId || 'robot-bartender'}.png`;
+            link.href = qrImage.src;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            projectId: "robot-bartender-f3e82", // Usamos el project ID del log
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID",
+            measurementId: "YOUR_MEASUREMENT_ID"
+        };
+
+        // Initialize Firebase
+        let app;
+        let db_firestore;
+
+        // Verificar si Firebase ya ha sido inicializado
+        if (!firebase.apps.length) {
+            app = firebase.initializeApp(firebaseConfig);
+        }
+        
+        // Inicializar Firestore
+        db_firestore = firebase.firestore();
+        pedidosCollection = db_firestore.collection('pedidos'); // Asignar valor
+
     </script>
+
 </body>
 </html>
